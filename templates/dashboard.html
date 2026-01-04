@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Dashboard - {% if data %}{{ data.city }}{% else %}Weather{% endif %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
+            background: {{ theme.gradient }};
+            color: {{ theme.text_color }};
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: {{ theme.overlay }};
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 3.5rem;
+            font-weight: 600;
+            text-shadow: {{ theme.text_shadow }};
+            margin-bottom: 1rem;
+            letter-spacing: -0.02em;
+        }
+
+        .search-container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 0.75rem;
+            background: {{ theme.card_bg }};
+            backdrop-filter: blur(20px);
+            border-radius: 50px;
+            padding: 0.5rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .search-box:focus-within {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .search-box input {
+            flex: 1;
+            padding: 0.875rem 1.5rem;
+            border: none;
+            background: transparent;
+            font-size: 1rem;
+            font-family: 'Outfit', sans-serif;
+            color: {{ theme.text_color }};
+            outline: none;
+        }
+
+        .search-box input::placeholder {
+            color: {{ theme.text_color }};
+            opacity: 0.6;
+        }
+
+        .search-box button {
+            padding: 0.875rem 2rem;
+            border: none;
+            background: {{ theme.text_color }};
+            color: {{ theme.gradient }};
+            font-size: 1rem;
+            font-weight: 600;
+            font-family: 'Outfit', sans-serif;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .search-box button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .error-message {
+            text-align: center;
+            padding: 2rem;
+            background: rgba(255, 100, 100, 0.2);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            margin: 2rem auto;
+            max-width: 500px;
+            font-size: 1.1rem;
+        }
+
+        .weather-dashboard {
+            display: grid;
+            gap: 2rem;
+            opacity: 0;
+            animation: fadeInUp 0.8s ease forwards;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .current-weather {
+            background: {{ theme.card_bg }};
+            backdrop-filter: blur(20px);
+            border-radius: 30px;
+            padding: 3rem;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .city-name {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            text-shadow: {{ theme.text_shadow }};
+        }
+
+        .weather-type {
+            font-size: 1.25rem;
+            font-weight: 400;
+            opacity: 0.85;
+            margin-bottom: 2rem;
+        }
+
+        .weather-icon {
+            font-size: 8rem;
+            margin: 1rem 0;
+            filter: drop-shadow(0 4px 20px rgba(0, 0, 0, 0.2));
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .temperature {
+            font-family: 'Playfair Display', serif;
+            font-size: 6rem;
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: 1.5rem;
+            text-shadow: {{ theme.text_shadow }};
+        }
+
+        .temperature span {
+            font-size: 3rem;
+            font-weight: 400;
+            opacity: 0.8;
+        }
+
+        .weather-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .detail-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            transition: all 0.3s ease;
+        }
+
+        .detail-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .detail-label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            opacity: 0.7;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .detail-value {
+            font-size: 1.75rem;
+            font-weight: 600;
+            text-shadow: {{ theme.text_shadow }};
+        }
+
+        .forecast-section {
+            background: {{ theme.card_bg }};
+            backdrop-filter: blur(20px);
+            border-radius: 30px;
+            padding: 2.5rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .forecast-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 2rem;
+            text-shadow: {{ theme.text_shadow }};
+        }
+
+        .forecast-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .forecast-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 1.5rem;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .forecast-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+        }
+
+        .forecast-day {
+            font-size: 1rem;
+            font-weight: 500;
+            margin-bottom: 1rem;
+            opacity: 0.9;
+        }
+
+        .forecast-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .forecast-temp {
+            font-size: 0.875rem;
+            font-weight: 600;
+            opacity: 0.85;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            .current-weather {
+                padding: 2rem 1.5rem;
+            }
+
+            .city-name {
+                font-size: 2rem;
+            }
+
+            .temperature {
+                font-size: 4.5rem;
+            }
+
+            .temperature span {
+                font-size: 2rem;
+            }
+
+            .weather-details {
+                grid-template-columns: 1fr;
+            }
+
+            .forecast-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Weather Dashboard</h1>
+            <form method="GET" action="">
+                <div class="search-container">
+                    <div class="search-box">
+                        <input type="text" name="location" placeholder="Enter city name..." value="{% if data %}{{ data.location }}{% endif %}" autocomplete="off">
+                        <button type="submit">Search</button>
+                    </div>
+                </div>
+            </form>
+        </header>
+
+        {% if error %}
+            <div class="error-message">
+                {{ error }}
+            </div>
+        {% endif %}
+
+        {% if data %}
+            <div class="weather-dashboard">
+                <div class="current-weather">
+                    <h2 class="city-name">{{ data.city }}</h2>
+                    <p class="weather-type">{{ data.weather_type }}</p>
+                    <div class="weather-icon">{{ data.weather_icon }}</div>
+                    <div class="temperature">
+                        {{ data.current_temp }}<span>°C</span>
+                    </div>
+                    
+                    <div class="weather-details">
+                        <div class="detail-card">
+                            <div class="detail-label">High</div>
+                            <div class="detail-value">{{ data.high_temp }}°C</div>
+                        </div>
+                        <div class="detail-card">
+                            <div class="detail-label">Low</div>
+                            <div class="detail-value">{{ data.low_temp }}°C</div>
+                        </div>
+                        <div class="detail-card">
+                            <div class="detail-label">Humidity</div>
+                            <div class="detail-value">{{ data.humidity }}</div>
+                        </div>
+                        <div class="detail-card">
+                            <div class="detail-label">Wind</div>
+                            <div class="detail-value">{{ data.wind_speed }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="forecast-section">
+                    <h3 class="forecast-title">7-Day Forecast</h3>
+                    <div class="forecast-grid">
+                        {% for day in data.forecast %}
+                            <div class="forecast-card">
+                                <div class="forecast-day">{{ day.day }}</div>
+                                <div class="forecast-icon">{{ day.icon }}</div>
+                                <div class="forecast-temp">
+                                    {{ day.high }}° / {{ day.low }}°
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        <div style="text-align: center; margin-top: 3rem;">
+            <a href="/debug/" style="color: {{ theme.text_color }}; opacity: 0.6; text-decoration: none; font-size: 0.875rem; transition: opacity 0.3s ease;">🎨 View All Weather Themes</a>
+        </div>
+    </div>
+</body>
+</html>
