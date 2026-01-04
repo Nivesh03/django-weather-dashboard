@@ -1,5 +1,7 @@
 # Weather Dashboard
 
+![App Screenshot](assets/screenshot.png)
+
 A beautiful, dynamic weather dashboard built with Django that adapts its UI based on current weather conditions.
 
 ## Features
